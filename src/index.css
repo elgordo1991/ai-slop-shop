@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap');
+
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: #faf9f7;
+  color: #111111;
+}
+
+/* Smooth transitions */
+* {
+  transition: opacity 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Minimalist Geometric Animations - Circles and Dots Only */
+.diagonal-circle {
+  position: absolute;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.circle-1 {
+  width: 140px;
+  height: 140px;
+  top: 15%;
+  left: 8%;
+  animation: diagonal-drift-1 28s ease-in-out infinite;
+}
+
+.circle-2 {
+  width: 90px;
+  height: 90px;
+  top: 65%;
+  right: 12%;
+  animation: diagonal-drift-2 22s ease-in-out infinite reverse;
+}
+
+.circle-3 {
+  width: 70px;
+  height: 70px;
+  bottom: 20%;
+  left: 75%;
+  animation: diagonal-drift-3 18s ease-in-out infinite;
+}
+
+.circle-4 {
+  width: 110px;
+  height: 110px;
+  top: 40%;
+  right: 35%;
+  animation: diagonal-drift-4 25s ease-in-out infinite reverse;
+}
+
+.diagonal-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #6b7280;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.dot-1 {
+  top: 20%;
+  left: 55%;
+  animation: diagonal-dot-1 14s ease-in-out infinite;
+}
+
+.dot-2 {
+  top: 75%;
+  left: 15%;
+  animation: diagonal-dot-2 16s ease-in-out infinite reverse;
+}
+
+.dot-3 {
+  top: 35%;
+  right: 15%;
+  animation: diagonal-dot-3 12s ease-in-out infinite;
+}
+
+.dot-4 {
+  bottom: 45%;
+  left: 40%;
+  animation: diagonal-dot-4 18s ease-in-out infinite reverse;
+}
+
+.dot-5 {
+  top: 60%;
+  right: 45%;
+  animation: diagonal-dot-5 13s ease-in-out infinite;
+}
+
+.dot-6 {
+  bottom: 25%;
+  right: 25%;
+  animation: diagonal-dot-6 15s ease-in-out infinite reverse;
+}
+
+/* Dynamic Diagonal Keyframes */
+@keyframes diagonal-drift-1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(40px, -30px) rotate(45deg); }
+  50% { transform: translate(-20px, -60px) rotate(90deg); }
+  75% { transform: translate(-50px, 20px) rotate(135deg); }
+}
+
+@keyframes diagonal-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(-35px, -25px) scale(1.2) rotate(60deg); }
+  66% { transform: translate(25px, 40px) scale(0.8) rotate(120deg); }
+}
+
+@keyframes diagonal-drift-3 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-45px, 35px) rotate(180deg); }
+}
+
+@keyframes diagonal-drift-4 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(30px, 25px) scale(0.9) rotate(90deg); }
+  50% { transform: translate(-25px, -35px) scale(1.1) rotate(180deg); }
+  75% { transform: translate(40px, -20px) scale(0.95) rotate(270deg); }
+}
+
+@keyframes diagonal-dot-1 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  25% { transform: translate(25px, -20px); opacity: 0.8; }
+  50% { transform: translate(-15px, -35px); opacity: 0.3; }
+  75% { transform: translate(-30px, 15px); opacity: 0.7; }
+}
+
+@keyframes diagonal-dot-2 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  33% { transform: translate(-20px, -25px); opacity: 0.9; }
+  66% { transform: translate(30px, 10px); opacity: 0.2; }
+}
+
+@keyframes diagonal-dot-3 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  50% { transform: translate(-40px, 30px); opacity: 0.8; }
+}
+
+@keyframes diagonal-dot-4 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  25% { transform: translate(20px, -30px); opacity: 0.7; }
+  75% { transform: translate(-25px, 20px); opacity: 0.4; }
+}
+
+@keyframes diagonal-dot-5 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  33% { transform: translate(-15px, 25px); opacity: 0.8; }
+  66% { transform: translate(35px, -15px); opacity: 0.3; }
+}
+
+@keyframes diagonal-dot-6 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  50% { transform: translate(-30px, -25px); opacity: 0.9; }
+}
+
+/* Minimal Button Styles */
+.minimal-button {
+  background: #111111;
+  color: white;
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.minimal-button:hover {
+  background: #374151;
+  transform: translateY(-1px);
+}
+
+.minimal-button:active {
+  transform: translateY(0px);
+}
+
+.minimal-button-full {
+  background: #111111;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.minimal-button-full:hover {
+  background: #374151;
+  transform: translateY(-1px);
+}
+
+.minimal-button-full:active {
+  transform: translateY(0px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Focus states */
+input:focus, select:focus, button:focus {
+  outline: none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Button hover states */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Form styling */
+input, select {
+  appearance: none;
+  background: white;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .text-6xl {
+    font-size: 3rem;
+  }
+  
+  .text-8xl {
+    font-size: 4rem;
+  }
+  
+  .diagonal-circle {
+    opacity: 0.3;
+  }
+  
+  .circle-1 {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .circle-2 {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .circle-3 {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .circle-4 {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .diagonal-dot {
+    width: 3px;
+    height: 3px;
+    opacity: 0.4;
+  }
+}
+
+/* Typography refinements */
+h1, h2, h3 {
+  letter-spacing: -0.025em;
+}
+
+/* Backdrop blur support */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .diagonal-circle,
+  .diagonal-dot {
+    animation: none;
+  }
+  
+  .minimal-button,
+  .minimal-button-full {
+    transition: none;
+  }
+}
