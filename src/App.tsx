@@ -265,8 +265,7 @@ function App() {
               slop
             </h1>
             <p className="text-lg text-gray-600 mb-12 leading-relaxed lowercase">
-              logo-forward basics.<br />
-              heavyweight cotton.<br />
+              premium heavyweight cotton t's.<br />
               nothing more.
             </p>
             <button
