@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, User, LogOut, X } from 'lucide-react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { signOut } from 'firebase/auth';
+import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { AuthModal } from './components/auth/AuthModal';
 import { PurchaseHistory } from './components/PurchaseHistory';
@@ -100,10 +98,9 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
 }
 
 function App() {
-  const [user, loading] = useAuthState(auth);
+  const [user] = useAuthState(auth);
   const [currentSection, setCurrentSection] = useState('hero');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -138,24 +135,11 @@ function App() {
     setCart(newCart);
   };
 
-  const handleSignOut = async () => {
-    await signOut(auth);
-  };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
   const checkoutPriceId = cart.length > 0 ? cart[0].product.priceId : null;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600 lowercase">loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-stone-50 text-gray-900 relative overflow-hidden">
@@ -212,42 +196,11 @@ function App() {
                 )}
               </button>
 
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setCurrentSection('account')}
-                    className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
-                  >
-                    <User className="w-4 h-4" />
-                    <span>account</span>
-                  </button>
-                  <button
-                    onClick={handleSignOut}
-                    className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>sign out</span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setAuthModalOpen(true)}
-                  className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
-                >
-                  <User className="w-4 h-4" />
-                  <span>sign in</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
       </nav>
 
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={() => {}}
-      />
 
       {selectedProduct && (
         <ProductModal
@@ -359,21 +312,6 @@ function App() {
         </section>
       )}
 
-      {/* Account Section */}
-      {currentSection === 'account' && user && (
-        <section className="min-h-screen pt-24 px-6 relative z-10">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-light mb-4 lowercase">account</h2>
-              <p className="text-gray-600 lowercase">{user.email}</p>
-            </div>
-
-            <div className="space-y-8">
-              <PurchaseHistory />
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Bag Section */}
       {currentSection === 'payment' && (
@@ -430,27 +368,18 @@ function App() {
 
             {cart.length > 0 && (
               <div className="mt-8">
-                {user ? (
-                  checkoutPriceId ? (
-                    <CheckoutButton
-                      priceId={checkoutPriceId}
-                      mode="payment"
-                      quantity={totalItems}
-                      className="w-full py-4 text-sm font-medium minimal-button-full lowercase"
-                    >
-                      purchase now — £{totalPrice}
-                    </CheckoutButton>
-                  ) : (
-                    <button disabled className="w-full py-4 text-sm font-medium bg-stone-200 text-stone-400 cursor-not-allowed lowercase">
-                      unavailable
-                    </button>
-                  )
-                ) : (
-                  <button
-                    onClick={() => setAuthModalOpen(true)}
+                {checkoutPriceId ? (
+                  <CheckoutButton
+                    priceId={checkoutPriceId}
+                    mode="payment"
+                    quantity={totalItems}
                     className="w-full py-4 text-sm font-medium minimal-button-full lowercase"
                   >
-                    sign in to purchase
+                    purchase now — £{totalPrice}
+                  </CheckoutButton>
+                ) : (
+                  <button disabled className="w-full py-4 text-sm font-medium bg-stone-200 text-stone-400 cursor-not-allowed lowercase">
+                    unavailable
                   </button>
                 )}
               </div>
@@ -483,10 +412,10 @@ function App() {
               it's on its way.
             </p>
             <button
-              onClick={() => setCurrentSection('account')}
+              onClick={() => setCurrentSection('shop')}
               className="minimal-button lowercase"
             >
-              view account
+              continue shopping
             </button>
           </div>
         </section>
