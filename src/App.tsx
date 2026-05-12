@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
-import { auth } from './lib/firebase';
-import { AuthModal } from './components/auth/AuthModal';
-import { PurchaseHistory } from './components/PurchaseHistory';
 import { CheckoutButton } from './components/CheckoutButton';
 import { products, type Product } from './stripe-config';
 
@@ -98,7 +95,6 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
 }
 
 function App() {
-  const [user] = useAuthState(auth);
   const [currentSection, setCurrentSection] = useState('hero');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
