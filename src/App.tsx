@@ -327,26 +327,26 @@ function App() {
         <section className="min-h-screen pt-24 px-6 relative z-10">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-light mb-4 lowercase">the brand</h2>
+              <h2 className="text-4xl font-light mb-4 lowercase">slop shop</h2>
             </div>
 
             <div className="grid md:grid-cols-2 gap-16">
               <div>
-                <h3 className="text-xl font-medium mb-4 lowercase">the logo</h3>
+                <h3 className="text-xl font-medium mb-4 lowercase">the brand</h3>
                 <p className="text-gray-600 leading-relaxed mb-8 lowercase">
-                  slop is built around one thing: the logo. a large backpiece graphic that speaks for itself. minimal front, bold back.
+                  simple graphics, understated details, no overthinking.
                 </p>
 
                 <h3 className="text-xl font-medium mb-4 lowercase">the fit</h3>
                 <p className="text-gray-600 leading-relaxed lowercase">
-                  oversized and boxy. dropped shoulders, heavy cotton. made to be worn loose and worn often.
+                  oversized. heavy cotton. made to be worn loose and worn often.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-xl font-medium mb-4 lowercase">two colours</h3>
+                <h3 className="text-xl font-medium mb-4 lowercase">colours</h3>
                 <p className="text-gray-600 leading-relaxed mb-8 lowercase">
-                  black and white. that's it. the logo does the work — the colour is just the canvas.
+                  black. that's it.
                 </p>
 
                 <h3 className="text-xl font-medium mb-4 lowercase">quality</h3>
