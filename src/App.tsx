@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
+import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X, Settings } from 'lucide-react';
 import { CheckoutButton } from './components/CheckoutButton';
-import { products, type Product } from './stripe-config';
+import { ProductCard, type Product } from './components/ProductCard';
+import { AdminPanel } from './components/AdminPanel';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface CartItem {
   product: Product;
@@ -17,6 +24,8 @@ interface ProductModalProps {
 
 function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
   const [selectedSize, setSelectedSize] = useState('');
+  const [imageIndex, setImageIndex] = useState(0);
+  const sizes = ['s', 'm', 'l', 'xl'];
 
   const handleAdd = () => {
     if (selectedSize) {
@@ -31,12 +40,25 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
         className="bg-stone-50 max-w-2xl w-full flex flex-col md:flex-row overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="md:w-1/2 aspect-square md:aspect-auto overflow-hidden bg-stone-100">
+        <div className="md:w-1/2 aspect-square md:aspect-auto overflow-hidden bg-stone-100 relative group">
           <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover"
+            src={product.images[imageIndex]}
+            alt={`${product.name} - view ${imageIndex + 1}`}
+            className="w-full h-full object-cover transition-transform"
           />
+          {product.images.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+              {product.images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setImageIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === imageIndex ? 'bg-stone-50 w-6' : 'bg-stone-50/50'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
         <div className="md:w-1/2 p-8 flex flex-col justify-between relative">
           <button
@@ -54,7 +76,7 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
             <div className="mb-8">
               <p className="text-sm font-medium mb-3 lowercase">size</p>
               <div className="grid grid-cols-4 gap-2">
-                {product.sizes.map((size) => (
+                {sizes.map((size) => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
@@ -74,7 +96,7 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
           <div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-500 lowercase">price</span>
-              <span className="text-lg font-medium">£{product.price}</span>
+              <span className="text-lg font-medium">£{(product.price / 100).toFixed(2)}</span>
             </div>
             <button
               onClick={handleAdd}
@@ -98,8 +120,12 @@ function App() {
   const [currentSection, setCurrentSection] = useState('hero');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   useEffect(() => {
+    loadProducts();
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
       setCurrentSection('thanks');
@@ -107,6 +133,17 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  const loadProducts = async () => {
+    setProductsLoading(true);
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('active', true)
+      .order('created_at', { ascending: false });
+    setProducts(data || []);
+    setProductsLoading(false);
+  };
 
   const addToBag = (product: Product, size: string) => {
     const existingIndex = cart.findIndex(
@@ -191,12 +228,23 @@ function App() {
                   </span>
                 )}
               </button>
-
+              <button
+                onClick={() => setAdminOpen(true)}
+                className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
+              >
+                <Settings className="w-4 h-4" />
+                <span>admin</span>
+              </button>
             </div>
           </div>
         </div>
       </nav>
 
+      <AdminPanel
+        isOpen={adminOpen}
+        onClose={() => setAdminOpen(false)}
+        onProductAdded={loadProducts}
+      />
 
       {selectedProduct && (
         <ProductModal
@@ -231,42 +279,40 @@ function App() {
       {/* Shop Section */}
       {currentSection === 'shop' && (
         <section className="min-h-screen pt-24 px-6 pb-16 relative z-10">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-light mb-3 lowercase">shop</h2>
-              <p className="text-gray-500 text-sm lowercase">all pieces — £20</p>
+              <p className="text-gray-500 text-sm lowercase">
+                {productsLoading ? 'loading...' : `${products.length} ${products.length === 1 ? 'piece' : 'pieces'} available`}
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="group cursor-pointer"
-                  onClick={() => setSelectedProduct(product)}
+            {productsLoading ? (
+              <div className="text-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
+                <p className="text-gray-600 lowercase">loading products...</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500 mb-8 lowercase">no products yet</p>
+                <button
+                  onClick={() => setAdminOpen(true)}
+                  className="minimal-button lowercase"
                 >
-                  <div className="relative overflow-hidden bg-stone-100 aspect-[3/4] mb-4">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                      <div className="bg-stone-50 py-3 px-4 text-center">
-                        <span className="text-sm font-medium lowercase">select size</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-medium lowercase">{product.name}</p>
-                      <p className="text-xs text-gray-500 mt-1 lowercase">{product.description}</p>
-                    </div>
-                    <span className="text-sm font-medium ml-4 shrink-0">£{product.price}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  add first product
+                </button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onSelect={(p) => setSelectedProduct(p)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
