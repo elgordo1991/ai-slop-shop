@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X, Settings } from 'lucide-react';
+import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
 import { CheckoutButton } from './components/CheckoutButton';
 import { ProductCard, type Product } from './components/ProductCard';
-import { AdminPanel } from './components/AdminPanel';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -121,7 +120,6 @@ function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [adminOpen, setAdminOpen] = useState(false);
   const [productsLoading, setProductsLoading] = useState(true);
 
   useEffect(() => {
@@ -228,23 +226,10 @@ function App() {
                   </span>
                 )}
               </button>
-              <button
-                onClick={() => setAdminOpen(true)}
-                className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
-              >
-                <Settings className="w-4 h-4" />
-                <span>admin</span>
-              </button>
             </div>
           </div>
         </div>
       </nav>
-
-      <AdminPanel
-        isOpen={adminOpen}
-        onClose={() => setAdminOpen(false)}
-        onProductAdded={loadProducts}
-      />
 
       {selectedProduct && (
         <ProductModal
@@ -294,13 +279,7 @@ function App() {
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-gray-500 mb-8 lowercase">no products yet</p>
-                <button
-                  onClick={() => setAdminOpen(true)}
-                  className="minimal-button lowercase"
-                >
-                  add first product
-                </button>
+                <p className="text-gray-500 lowercase">no products available</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
