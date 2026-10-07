@@ -45,10 +45,10 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-stone-50 max-w-2xl w-full flex flex-col md:flex-row overflow-hidden"
+        className="bg-stone-50 max-w-2xl w-full max-h-[calc(100dvh-2rem)] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="md:w-1/2 aspect-square md:aspect-auto overflow-hidden bg-stone-100 relative group">
+        <div className="md:w-1/2 aspect-[4/3] md:aspect-auto shrink-0 overflow-hidden bg-stone-100 relative group">
           <img
             src={product.images[imageIndex]}
             alt={`${product.name} - view ${imageIndex + 1}`}
