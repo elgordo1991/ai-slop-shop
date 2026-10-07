@@ -436,7 +436,7 @@ function App() {
                   checkout — {formatPrice(totalPrice)}
                 </CheckoutButton>
                 <p className="text-xs text-gray-400 text-center mt-3 lowercase">
-                  secure payment by stripe. shipping address collected at checkout.
+                  secure payment by stripe. got a discount code? add it at checkout.
                 </p>
               </div>
             )}

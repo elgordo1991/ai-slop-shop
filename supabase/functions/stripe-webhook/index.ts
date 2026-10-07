@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   }
 
   const session = await stripe.checkout.sessions.retrieve(base.id, {
-    expand: ["line_items.data.price.product"],
+    expand: ["line_items.data.price.product", "discounts.promotion_code"],
   });
 
   // Sizes come from session metadata ("slug:size:qty,..."); amounts from the line items.
@@ -87,6 +87,10 @@ Deno.serve(async (req) => {
       })
     : lines.map(({ legacy_size, ...l }) => ({ ...l, size: legacy_size }));
 
+  const discountCodes = (session.discounts ?? [])
+    .map((d) => (typeof d.promotion_code === "object" ? d.promotion_code?.code : null))
+    .filter((c): c is string => !!c);
+
   const shipping =
     session.collected_information?.shipping_details ??
     (session as unknown as { shipping_details?: Stripe.Checkout.Session.CollectedInformation.ShippingDetails }).shipping_details ??
@@ -107,6 +111,8 @@ Deno.serve(async (req) => {
       shipping,
       items,
       amount_total: session.amount_total,
+      amount_discount: session.total_details?.amount_discount ?? 0,
+      discount_codes: discountCodes,
       currency: session.currency,
       status: "paid",
     },

@@ -136,6 +136,8 @@ Deno.serve(async (req) => {
       shipping_address_collection: { allowed_countries: countries },
       phone_number_collection: { enabled: false },
       billing_address_collection: "auto",
+      // Shows "Add promotion code" on the Stripe page; codes are managed in the Stripe dashboard.
+      allow_promotion_codes: true,
       // Sizes live here because line items point at the product, not a per-size variant.
       metadata: { items: sizing.join(",").slice(0, 500) },
       payment_intent_data: { description: summary.join(", ").slice(0, 1000) },
