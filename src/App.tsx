@@ -4,6 +4,7 @@ import { CheckoutButton } from './components/CheckoutButton';
 import { SuggestModal } from './components/SuggestModal';
 import { ProductCard, formatPrice, type Product } from './components/ProductCard';
 import { supabase } from './lib/supabase';
+import { useSwipe } from './lib/useSwipe';
 
 const CART_KEY = 'slop-bag-v1';
 
@@ -34,6 +35,11 @@ interface ProductModalProps {
 function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
   const [selectedSize, setSelectedSize] = useState('');
   const [imageIndex, setImageIndex] = useState(0);
+  const imageCount = product.images.length;
+  const swipe = useSwipe(
+    () => setImageIndex((i) => (i + 1) % imageCount),
+    () => setImageIndex((i) => (i - 1 + imageCount) % imageCount),
+  );
   const sizes = product.sizes?.length ? product.sizes : ['s', 'm', 'l', 'xl'];
 
   const handleAdd = () => {
@@ -49,10 +55,14 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
         className="bg-stone-50 max-w-2xl w-full max-h-[calc(100dvh-2rem)] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="md:w-1/2 aspect-[4/3] md:aspect-auto shrink-0 overflow-hidden bg-stone-100 relative group">
+        <div
+          className="md:w-1/2 aspect-[4/3] md:aspect-auto shrink-0 overflow-hidden bg-stone-100 relative group touch-pan-y select-none"
+          {...(imageCount > 1 ? swipe.handlers : {})}
+        >
           <img
             src={product.images[imageIndex]}
             alt={`${product.name} - view ${imageIndex + 1}`}
+            draggable={false}
             className="w-full h-full object-cover transition-transform"
           />
           {product.images.length > 1 && (
