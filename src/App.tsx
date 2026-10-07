@@ -368,7 +368,7 @@ function App() {
 
             <ul className="text-center text-lg text-gray-600 leading-loose lowercase">
               <li>black tees.</li>
-              <li>heavyweight 300gsm cotton.</li>
+              <li>heavyweight 300 gram cotton.</li>
               <li>premium quality, screen printed.</li>
             </ul>
           </div>
