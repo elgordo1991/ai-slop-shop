@@ -78,8 +78,7 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
 
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">slop</p>
-            <h2 className="text-2xl font-light mb-2 lowercase">{product.name}</h2>
-            <p className="text-sm text-gray-500 mb-6 lowercase">{product.description}</p>
+            <h2 className="text-2xl font-light mb-6 lowercase">{product.name}</h2>
 
             <div className="mb-8">
               <p className="text-sm font-medium mb-3 lowercase">size</p>

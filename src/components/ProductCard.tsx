@@ -5,7 +5,7 @@ export interface Product {
   id: string;
   slug: string;
   name: string;
-  description: string;
+  stripe_product_id: string | null;
   price: number; // pence
   currency: string;
   color: string;
@@ -90,11 +90,8 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <p className="text-sm font-medium lowercase">{product.name}</p>
-          <p className="text-xs text-gray-500 mt-1 lowercase">{product.description}</p>
-        </div>
+      <div className="flex justify-between items-baseline">
+        <p className="text-sm font-medium lowercase">{product.name}</p>
         <span className="text-sm font-medium ml-4 shrink-0">{formatPrice(product.price)}</span>
       </div>
     </div>

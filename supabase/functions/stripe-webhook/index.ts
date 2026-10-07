@@ -48,17 +48,44 @@ Deno.serve(async (req) => {
     expand: ["line_items.data.price.product"],
   });
 
-  const items = (session.line_items?.data ?? []).map((li) => {
+  // Sizes come from session metadata ("slug:size:qty,..."); amounts from the line items.
+  const sized = (session.metadata?.items ?? "")
+    .split(",")
+    .filter(Boolean)
+    .map((entry) => {
+      const [slug, size, qty] = entry.split(":");
+      return { slug, size, quantity: Number(qty) };
+    });
+
+  const lines = (session.line_items?.data ?? []).map((li) => {
     const product = li.price?.product as Stripe.Product | undefined;
     return {
-      product_id: product?.metadata?.product_id ?? null,
-      size: product?.metadata?.size ?? null,
+      stripe_product_id: product?.id ?? null,
+      // Older sessions stored these on an ad-hoc product
+      slug: product?.metadata?.slug ?? null,
+      product_id: product?.metadata?.supabase_id ?? product?.metadata?.product_id ?? null,
+      legacy_size: product?.metadata?.size ?? null,
       name: li.description,
       quantity: li.quantity,
       unit_amount: li.price?.unit_amount ?? null,
       amount_total: li.amount_total,
     };
   });
+
+  const items = sized.length
+    ? sized.map((s) => {
+        const line = lines.find((l) => l.slug === s.slug);
+        return {
+          product_id: line?.product_id ?? null,
+          stripe_product_id: line?.stripe_product_id ?? null,
+          slug: s.slug,
+          name: line?.name ?? s.slug,
+          size: s.size,
+          quantity: s.quantity,
+          unit_amount: line?.unit_amount ?? null,
+        };
+      })
+    : lines.map(({ legacy_size, ...l }) => ({ ...l, size: legacy_size }));
 
   const shipping =
     session.collected_information?.shipping_details ??

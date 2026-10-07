@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
   const ids = [...new Set(items.map((i) => i.product_id))];
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, name, price, currency, images, sizes")
+    .select("id, slug, name, price, currency, images, sizes, stripe_product_id")
     .in("id", ids)
     .eq("active", true);
 
@@ -96,6 +96,8 @@ Deno.serve(async (req) => {
 
   const byId = new Map(products.map((p) => [p.id, p]));
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+  const summary: string[] = []; // e.g. "bones (M) x2" — shown on the payment in Stripe
+  const sizing: string[] = []; // e.g. "bones:m:2" — read back by stripe-webhook
 
   for (const it of items) {
     const p = byId.get(it.product_id);
@@ -103,18 +105,20 @@ Deno.serve(async (req) => {
     const size = it.size.toLowerCase();
     if (!p.sizes.includes(size)) return json({ error: `${p.name} isn't available in ${size}` }, 409);
 
+    // Each tee is its own product in Stripe (stripe_product_id); the price comes from the
+    // products table so the site and checkout can never disagree.
     lineItems.push({
       quantity: it.quantity,
-      price_data: {
-        currency: p.currency,
-        unit_amount: p.price,
-        product_data: {
-          name: `${p.name} — ${size.toUpperCase()}`,
-          images: p.images.slice(0, 1),
-          metadata: { product_id: p.id, size },
-        },
-      },
+      price_data: p.stripe_product_id
+        ? { currency: p.currency, unit_amount: p.price, product: p.stripe_product_id }
+        : {
+            currency: p.currency,
+            unit_amount: p.price,
+            product_data: { name: p.name, images: p.images.slice(0, 1), metadata: { supabase_id: p.id, slug: p.slug } },
+          },
     });
+    summary.push(`${p.name} (${size.toUpperCase()}) x${it.quantity}`);
+    sizing.push(`${p.slug}:${size}:${it.quantity}`);
   }
 
   const countries = (Deno.env.get("SHIPPING_COUNTRIES") ?? "GB")
@@ -132,6 +136,9 @@ Deno.serve(async (req) => {
       shipping_address_collection: { allowed_countries: countries },
       phone_number_collection: { enabled: false },
       billing_address_collection: "auto",
+      // Sizes live here because line items point at the product, not a per-size variant.
+      metadata: { items: sizing.join(",").slice(0, 500) },
+      payment_intent_data: { description: summary.join(", ").slice(0, 1000) },
       success_url: `${base}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/?cancelled=true`,
     });
