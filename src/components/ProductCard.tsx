@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSwipe } from '../lib/useSwipe';
 
 export interface Product {
   id: string;
@@ -33,16 +34,28 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
     setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
   };
 
+  const count = product.images.length;
+  const swipe = useSwipe(
+    () => setCurrentImageIndex((prev) => (prev + 1) % count),
+    () => setCurrentImageIndex((prev) => (prev - 1 + count) % count),
+  );
+
   return (
     <div
-      onClick={() => onSelect(product)}
+      onClick={() => {
+        if (!swipe.wasSwipe()) onSelect(product);
+      }}
       className="group cursor-pointer"
     >
-      <div className="relative overflow-hidden bg-stone-100 aspect-[3/4] mb-4">
+      <div
+        className="relative overflow-hidden bg-stone-100 aspect-[3/4] mb-4 touch-pan-y select-none"
+        {...(count > 1 ? swipe.handlers : {})}
+      >
         <img
           src={product.images[currentImageIndex]}
           alt={`${product.name} - view ${currentImageIndex + 1}`}
           loading="lazy"
+          draggable={false}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
 
@@ -64,7 +77,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
               <ChevronRight className="w-5 h-5 text-gray-900" />
             </button>
 
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
               {product.images.map((_, idx) => (
                 <button
                   key={idx}
