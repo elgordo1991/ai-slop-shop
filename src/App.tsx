@@ -5,6 +5,7 @@ import { SuggestModal } from './components/SuggestModal';
 import { ProductCard, formatPrice, type Product } from './components/ProductCard';
 import { supabase } from './lib/supabase';
 import { useSwipe } from './lib/useSwipe';
+import { trackView } from './lib/track';
 
 const CART_KEY = 'slop-bag-v1';
 
@@ -157,6 +158,12 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  // Count each section (and each tee opened) as a page view for the stats dashboard.
+  useEffect(() => {
+    const sectionPath: Record<string, string> = { hero: '/', payment: '/bag' };
+    trackView(selectedProduct ? `/tee/${selectedProduct.slug}` : sectionPath[currentSection] ?? `/${currentSection}`);
+  }, [currentSection, selectedProduct]);
 
   useEffect(() => {
     try {
