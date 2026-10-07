@@ -31,6 +31,8 @@ npm run dev
 - `STRIPE_WEBHOOK_SECRET` — `whsec_…` from the webhook below
 - `SITE_URL` *(optional)* — defaults to `https://slop-shop.xyz`
 - `SHIPPING_COUNTRIES` *(optional)* — comma-separated, defaults to `GB`
+- `RESEND_API_KEY` *(optional)* — emails each paid order (tee, size, quantity, address) so it can be
+  placed in Tapstitch; `ORDER_EMAIL_TO` overrides the recipient
 
 **Stripe → Developers → Webhooks → Add endpoint**
 
