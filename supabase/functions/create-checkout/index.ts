@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")?.trim();
   if (!stripeKey) return json({ error: "Checkout isn't set up yet. Please try again later." }, 503);
 
   let items: BagItem[];

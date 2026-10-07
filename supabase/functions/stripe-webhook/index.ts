@@ -14,8 +14,8 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider();
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
-  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")?.trim();
+  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")?.trim();
   if (!stripeKey || !webhookSecret) return new Response("Not configured", { status: 503 });
 
   const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() });
