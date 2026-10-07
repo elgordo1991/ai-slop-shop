@@ -366,31 +366,11 @@ function App() {
               <h2 className="text-4xl font-light mb-4 lowercase">slop shop</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-16">
-              <div>
-                <h3 className="text-xl font-medium mb-4 lowercase">the brand</h3>
-                <p className="text-gray-600 leading-relaxed mb-8 lowercase">
-                  simple graphics, understated details, no overthinking.
-                </p>
-
-                <h3 className="text-xl font-medium mb-4 lowercase">the fit</h3>
-                <p className="text-gray-600 leading-relaxed lowercase">
-                  oversized. heavy cotton. made to be worn loose and worn often.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-medium mb-4 lowercase">colours</h3>
-                <p className="text-gray-600 leading-relaxed mb-8 lowercase">
-                  black. that's it.
-                </p>
-
-                <h3 className="text-xl font-medium mb-4 lowercase">quality</h3>
-                <p className="text-gray-600 leading-relaxed lowercase">
-                  heavyweight 300gsm cotton. screen printed graphics. built to last.
-                </p>
-              </div>
-            </div>
+            <ul className="text-center text-lg text-gray-600 leading-loose lowercase">
+              <li>black tees.</li>
+              <li>heavyweight 300gsm cotton.</li>
+              <li>premium quality, screen printed.</li>
+            </ul>
           </div>
         </section>
       )}
