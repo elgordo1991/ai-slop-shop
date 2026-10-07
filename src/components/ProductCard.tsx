@@ -3,13 +3,17 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface Product {
   id: string;
+  slug: string;
   name: string;
   description: string;
-  price: number;
+  price: number; // pence
+  currency: string;
   color: string;
   images: string[];
-  stripe_price_id: string;
+  sizes: string[];
 }
+
+export const formatPrice = (pence: number) => `£${(pence / 100).toFixed(2)}`;
 
 interface ProductCardProps {
   product: Product;
@@ -38,6 +42,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
         <img
           src={product.images[currentImageIndex]}
           alt={`${product.name} - view ${currentImageIndex + 1}`}
+          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
 
@@ -90,7 +95,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
           <p className="text-sm font-medium lowercase">{product.name}</p>
           <p className="text-xs text-gray-500 mt-1 lowercase">{product.description}</p>
         </div>
-        <span className="text-sm font-medium ml-4 shrink-0">£{(product.price / 100).toFixed(2)}</span>
+        <span className="text-sm font-medium ml-4 shrink-0">{formatPrice(product.price)}</span>
       </div>
     </div>
   );

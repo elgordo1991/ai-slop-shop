@@ -1,20 +1,48 @@
-Slop is a minimalist e-commerce React web app where users can buy a unique t-shirt with no preview. Built with modern tools like Vite, Tailwind CSS, and TypeScript.
+# slop
 
-Tech Stack:
-React (18.x)
-TypeScript
-Vite
-Tailwind CSS
-Lucide Icons
-PostCSS & Autoprefixer
-Firebase 
-Stripe Payments integration
+Minimal shop for heavyweight black tees — React, TypeScript, Vite and Tailwind on the front,
+Supabase for everything else, Stripe Checkout for payments. Hosted on Netlify.
 
-Styling:
-Font: Inter
-Animations: Circles & Dots float for a subtle vibeindex
-Color palette: Soft black & white minimalist base
+## How it fits together
 
-Deployment
-This app is production-ready and depployed to Netlify.
+| Piece | Where |
+| --- | --- |
+| Products (name, price in pence, photos, sizes) | Supabase table `products` — edit in the Supabase Table Editor |
+| Product photos | Supabase Storage bucket `product-images` (source files in `supabase/product-images/`) |
+| Checkout | Edge function `create-checkout` builds a Stripe Checkout session from **database** prices |
+| Orders | Edge function `stripe-webhook` writes paid orders to the private `orders` table |
 
+Guest checkout only — Stripe collects the email and shipping address.
+
+## Running locally
+
+```bash
+cp .env.example .env   # fill in the anon key
+npm install
+npm run dev
+```
+
+## One-time setup
+
+**Supabase → Edge Functions → Secrets**
+
+- `STRIPE_SECRET_KEY` — `sk_test_…` while testing, `sk_live_…` to go live
+- `STRIPE_WEBHOOK_SECRET` — `whsec_…` from the webhook below
+- `SITE_URL` *(optional)* — defaults to `https://slop-shop.xyz`
+- `SHIPPING_COUNTRIES` *(optional)* — comma-separated, defaults to `GB`
+
+**Stripe → Developers → Webhooks → Add endpoint**
+
+- URL: `https://urplirziygoyzsqwtvlt.supabase.co/functions/v1/stripe-webhook`
+- Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`
+
+**Netlify → Site configuration → Environment variables**
+
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (as in `.env.example`)
+
+## Adding a product
+
+1. Upload photos to the `product-images` bucket (square, ~1400px WebP works well).
+2. Add a row to `products`: `slug`, `name`, `description`, `price` in pence (2000 = £20),
+   and `images` as the public URLs, back view first.
+3. Set `active` to false to take something off sale.

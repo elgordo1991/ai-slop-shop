@@ -1,23 +1,19 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "slop-shop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "echo 'Skipping lint'",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
-    "firebase": "^10.7.1",
-    "firebase-tools": "^14.9.0",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-firebase-hooks": "^5.1.1",
-    "stripe": "^18.3.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
