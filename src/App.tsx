@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
+import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X, Lightbulb } from 'lucide-react';
 import { CheckoutButton } from './components/CheckoutButton';
+import { SuggestModal } from './components/SuggestModal';
 import { ProductCard, formatPrice, type Product } from './components/ProductCard';
 import { supabase } from './lib/supabase';
 
@@ -128,6 +129,7 @@ function App() {
   const [cart, setCart] = useState<CartItem[]>(loadSavedCart);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
@@ -235,27 +237,38 @@ function App() {
             >
               slop
             </button>
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-6 sm:space-x-8">
               <button
+                aria-label="shop"
                 onClick={() => setCurrentSection('shop')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
               >
                 <Shirt className="w-4 h-4" />
-                <span>shop</span>
+                <span className="hidden sm:inline">shop</span>
               </button>
               <button
+                aria-label="about"
                 onClick={() => setCurrentSection('about')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
               >
                 <Info className="w-4 h-4" />
-                <span>about</span>
+                <span className="hidden sm:inline">about</span>
               </button>
               <button
+                aria-label="suggest your slop"
+                onClick={() => setSuggestOpen(true)}
+                className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
+              >
+                <Lightbulb className="w-4 h-4" />
+                <span className="hidden sm:inline">suggest</span>
+              </button>
+              <button
+                aria-label="bag"
                 onClick={() => setCurrentSection('payment')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 relative lowercase"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>bag</span>
+                <span className="hidden sm:inline">bag</span>
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     {totalItems}
@@ -266,6 +279,8 @@ function App() {
           </div>
         </div>
       </nav>
+
+      {suggestOpen && <SuggestModal onClose={() => setSuggestOpen(false)} />}
 
       {selectedProduct && (
         <ProductModal
@@ -328,6 +343,17 @@ function App() {
                 ))}
               </div>
             )}
+
+            <div className="text-center mt-24 border-t border-stone-200 pt-16">
+              <p className="text-sm text-gray-500 mb-6 lowercase">got an idea for the next one?</p>
+              <button
+                onClick={() => setSuggestOpen(true)}
+                className="minimal-button flex items-center space-x-2 mx-auto lowercase"
+              >
+                <Lightbulb className="w-4 h-4" />
+                <span>suggest your slop</span>
+              </button>
+            </div>
           </div>
         </section>
       )}
