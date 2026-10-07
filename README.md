@@ -8,6 +8,7 @@ Supabase for everything else, Stripe Checkout for payments. Hosted on Netlify.
 | Piece | Where |
 | --- | --- |
 | Products (name, price in pence, photos, sizes) | Supabase table `products` — edit in the Supabase Table Editor |
+| Stripe catalogue | Each tee is its own Stripe product (`products.stripe_product_id`, e.g. `slop_bones`); the price charged comes from Supabase |
 | Product photos | Supabase Storage bucket `product-images` (source files in `supabase/product-images/`) |
 | Checkout | Edge function `create-checkout` builds a Stripe Checkout session from **database** prices |
 | Orders | Edge function `stripe-webhook` writes paid orders to the private `orders` table |
@@ -43,6 +44,7 @@ npm run dev
 ## Adding a product
 
 1. Upload photos to the `product-images` bucket (square, ~1400px WebP works well).
-2. Add a row to `products`: `slug`, `name`, `description`, `price` in pence (2000 = £20),
-   and `images` as the public URLs, back view first.
-3. Set `active` to false to take something off sale.
+2. Create the product in Stripe (Product catalogue → Add product, no price needed) and note its ID.
+3. Add a row to `products`: `slug`, `name`, `price` in pence (2000 = £20), `images` as the
+   public URLs (back view first) and `stripe_product_id`.
+4. Set `active` to false to take something off sale.
