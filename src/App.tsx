@@ -237,34 +237,38 @@ function App() {
             >
               slop
             </button>
-            <div className="flex items-center space-x-5 sm:space-x-8">
+            <div className="flex items-center space-x-6 sm:space-x-8">
               <button
+                aria-label="shop"
                 onClick={() => setCurrentSection('shop')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
               >
                 <Shirt className="w-4 h-4" />
-                <span>shop</span>
+                <span className="hidden sm:inline">shop</span>
               </button>
               <button
+                aria-label="about"
                 onClick={() => setCurrentSection('about')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
               >
                 <Info className="w-4 h-4" />
-                <span>about</span>
+                <span className="hidden sm:inline">about</span>
               </button>
               <button
+                aria-label="suggest your slop"
                 onClick={() => setSuggestOpen(true)}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
               >
                 <Lightbulb className="w-4 h-4" />
-                <span>suggest</span>
+                <span className="hidden sm:inline">suggest</span>
               </button>
               <button
+                aria-label="bag"
                 onClick={() => setCurrentSection('payment')}
                 className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 relative lowercase"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>bag</span>
+                <span className="hidden sm:inline">bag</span>
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     {totalItems}
