@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X } from 'lucide-react';
 import { CheckoutButton } from './components/CheckoutButton';
-import { ProductCard, type Product } from './components/ProductCard';
-import { createClient } from '@supabase/supabase-js';
+import { ProductCard, formatPrice, type Product } from './components/ProductCard';
+import { supabase } from './lib/supabase';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+const CART_KEY = 'slop-bag-v1';
+
+function loadSavedCart(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as Partial<CartItem>[]).filter(
+          (i): i is CartItem => Array.isArray(i?.product?.images) && !!i.size && (i.quantity ?? 0) > 0,
+        ) : [];
+  } catch {
+    return [];
+  }
+}
 
 interface CartItem {
   product: Product;
@@ -24,7 +33,7 @@ interface ProductModalProps {
 function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
   const [selectedSize, setSelectedSize] = useState('');
   const [imageIndex, setImageIndex] = useState(0);
-  const sizes = ['s', 'm', 'l', 'xl'];
+  const sizes = product.sizes?.length ? product.sizes : ['s', 'm', 'l', 'xl'];
 
   const handleAdd = () => {
     if (selectedSize) {
@@ -74,7 +83,7 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
 
             <div className="mb-8">
               <p className="text-sm font-medium mb-3 lowercase">size</p>
-              <div className="grid grid-cols-4 gap-2">
+              <div className={`grid gap-2 ${sizes.length > 4 ? 'grid-cols-6' : 'grid-cols-4'}`}>
                 {sizes.map((size) => (
                   <button
                     key={size}
@@ -95,7 +104,7 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
           <div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-500 lowercase">price</span>
-              <span className="text-lg font-medium">£{(product.price / 100).toFixed(2)}</span>
+              <span className="text-lg font-medium">{formatPrice(product.price)}</span>
             </div>
             <button
               onClick={handleAdd}
@@ -117,7 +126,8 @@ function ProductModal({ product, onClose, onAddToBag }: ProductModalProps) {
 
 function App() {
   const [currentSection, setCurrentSection] = useState('hero');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(loadSavedCart);
+  const [notice, setNotice] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -128,9 +138,35 @@ function App() {
     if (urlParams.get('success') === 'true') {
       setCurrentSection('thanks');
       setCart([]);
+    } else if (urlParams.get('cancelled') === 'true') {
+      setCurrentSection('payment');
+      setNotice('checkout cancelled — your bag is still here.');
+    }
+    if (urlParams.toString()) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch {
+      /* storage unavailable — bag just won't persist */
+    }
+  }, [cart]);
+
+  // Keep bag items in sync with live product data (price/photo changes, removed products).
+  useEffect(() => {
+    if (productsLoading) return;
+    setCart((current) =>
+      current
+        .map((item) => {
+          const live = products.find((p) => p.id === item.product.id);
+          return live ? { ...item, product: live } : null;
+        })
+        .filter((item): item is CartItem => item !== null),
+    );
+  }, [products, productsLoading]);
 
   const loadProducts = async () => {
     setProductsLoading(true);
@@ -138,7 +174,7 @@ function App() {
       .from('products')
       .select('*')
       .eq('active', true)
-      .order('created_at', { ascending: false });
+      .order('sort_order', { ascending: true });
     setProducts(data || []);
     setProductsLoading(false);
   };
@@ -148,9 +184,7 @@ function App() {
       item => item.product.id === product.id && item.size === size
     );
     if (existingIndex >= 0) {
-      const updated = [...cart];
-      updated[existingIndex].quantity += 1;
-      setCart(updated);
+      setCart(cart.map((item, i) => (i === existingIndex ? { ...item, quantity: Math.min(item.quantity + 1, 10) } : item)));
     } else {
       setCart([...cart, { product, size, quantity: 1 }]);
     }
@@ -158,18 +192,21 @@ function App() {
   };
 
   const updateQuantity = (index: number, change: number) => {
-    const newCart = [...cart];
-    newCart[index].quantity += change;
-    if (newCart[index].quantity <= 0) {
-      newCart.splice(index, 1);
-    }
-    setCart(newCart);
+    setCart(
+      cart
+        .map((item, i) => (i === index ? { ...item, quantity: Math.min(item.quantity + change, 10) } : item))
+        .filter((item) => item.quantity > 0),
+    );
   };
 
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
-  const checkoutPriceId = cart.length > 0 ? cart[0].product.priceId : null;
+  const checkoutItems = cart.map((item) => ({
+    product_id: item.product.id,
+    size: item.size,
+    quantity: item.quantity,
+  }));
 
 
   return (
@@ -342,6 +379,10 @@ function App() {
               <h2 className="text-4xl font-light mb-4 lowercase">bag</h2>
             </div>
 
+            {notice && (
+              <p className="text-sm text-gray-600 text-center mb-8 lowercase">{notice}</p>
+            )}
+
             {cart.length > 0 && (
               <div className="border border-stone-300 bg-white p-6 mb-8">
                 <h3 className="text-xs font-medium uppercase tracking-widest mb-6 text-gray-400">order summary</h3>
@@ -350,7 +391,7 @@ function App() {
                     <div className="flex items-center space-x-4">
                       <div className="w-14 h-14 bg-stone-100 overflow-hidden shrink-0">
                         <img
-                          src={item.product.image}
+                          src={item.product.images[0]}
                           alt={item.product.name}
                           className="w-full h-full object-cover"
                         />
@@ -376,33 +417,28 @@ function App() {
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <span className="text-sm font-medium w-16 text-right">£{item.quantity * item.product.price}</span>
+                      <span className="text-sm font-medium w-16 text-right">{formatPrice(item.quantity * item.product.price)}</span>
                     </div>
                   </div>
                 ))}
                 <div className="flex justify-between items-center pt-6">
                   <span className="text-xs font-medium uppercase tracking-widest text-gray-400">total</span>
-                  <span className="text-lg font-medium">£{totalPrice}</span>
+                  <span className="text-lg font-medium">{formatPrice(totalPrice)}</span>
                 </div>
               </div>
             )}
 
             {cart.length > 0 && (
               <div className="mt-8">
-                {checkoutPriceId ? (
-                  <CheckoutButton
-                    priceId={checkoutPriceId}
-                    mode="payment"
-                    quantity={totalItems}
-                    className="w-full py-4 text-sm font-medium minimal-button-full lowercase"
-                  >
-                    purchase now — £{totalPrice}
-                  </CheckoutButton>
-                ) : (
-                  <button disabled className="w-full py-4 text-sm font-medium bg-stone-200 text-stone-400 cursor-not-allowed lowercase">
-                    unavailable
-                  </button>
-                )}
+                <CheckoutButton
+                  items={checkoutItems}
+                  className="w-full py-4 text-sm font-medium minimal-button-full lowercase"
+                >
+                  checkout — {formatPrice(totalPrice)}
+                </CheckoutButton>
+                <p className="text-xs text-gray-400 text-center mt-3 lowercase">
+                  secure payment by stripe. shipping address collected at checkout.
+                </p>
               </div>
             )}
 
@@ -430,7 +466,7 @@ function App() {
             </h1>
             <p className="text-lg text-gray-600 mb-12 leading-relaxed lowercase">
               your order has been placed.<br />
-              it's on its way.
+              a receipt is on its way to your inbox.
             </p>
             <button
               onClick={() => setCurrentSection('shop')}

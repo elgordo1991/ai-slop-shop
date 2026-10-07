@@ -1,68 +1,62 @@
 import React, { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+
+export interface CheckoutLine {
+  product_id: string;
+  size: string;
+  quantity: number;
+}
 
 interface CheckoutButtonProps {
-  priceId: string;
-  mode: 'payment' | 'subscription';
-  quantity?: number;
+  items: CheckoutLine[];
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
 }
 
-export function CheckoutButton({ 
-  priceId, 
-  mode, 
-  quantity = 1, 
-  children, 
-  className = '', 
-  disabled = false 
-}: CheckoutButtonProps) {
+export function CheckoutButton({ items, children, className = '', disabled = false }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
     setLoading(true);
-
+    setError(null);
     try {
-      const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
-      
-      const result = await createCheckoutSession({
-        priceId,
-        mode,
-        quantity,
-        successUrl: `${window.location.origin}?success=true`,
-        cancelUrl: `${window.location.origin}?cancel=true`,
-      });
+      const { data, error } = await supabase.functions.invoke<{ url?: string; error?: string }>(
+        'create-checkout',
+        { body: { items } },
+      );
 
-      const data = result.data as { url?: string; error?: string };
-
-      if (data.error) {
-        throw new Error(data.error);
+      if (error) {
+        let message = 'something went wrong starting checkout';
+        if (error instanceof FunctionsHttpError) {
+          const body = await error.context.json().catch(() => null);
+          if (body?.error) message = body.error;
+        }
+        throw new Error(message);
       }
+      if (!data?.url) throw new Error(data?.error ?? 'something went wrong starting checkout');
 
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert(error instanceof Error ? error.message : 'An error occurred during checkout');
-    } finally {
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message.toLowerCase() : 'something went wrong');
       setLoading(false);
     }
   };
 
+  const isDisabled = disabled || loading || items.length === 0;
+
   return (
-    <button
-      onClick={handleCheckout}
-      disabled={disabled || loading}
-      className={`${className} ${
-        disabled || loading
-          ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-          : ''
-      }`}
-    >
-      {loading ? 'processing...' : children}
-    </button>
+    <div>
+      <button
+        onClick={handleCheckout}
+        disabled={isDisabled}
+        className={`${className} ${isDisabled ? 'bg-stone-200 text-stone-400 cursor-not-allowed' : ''}`}
+      >
+        {loading ? 'taking you to checkout...' : children}
+      </button>
+      {error && <p className="text-sm text-red-600 mt-3 text-center lowercase">{error}</p>}
+    </div>
   );
 }
