@@ -3,6 +3,7 @@ import { Dices, ExternalLink } from 'lucide-react';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { formatPrice } from './ProductCard';
+import { postageFor } from '../lib/postage';
 
 export interface RandomImage {
   id: string;
@@ -161,7 +162,7 @@ export function RandomSlop() {
                   {buying ? 'taking you to checkout...' : size ? `buy this one — ${formatPrice(PRICE)}` : 'select a size'}
                 </button>
                 <p className="text-xs text-gray-400 text-center mt-3 lowercase">
-                  printed on the back, made to order. secure payment by stripe.
+                  + {formatPrice(postageFor(1, PRICE))} uk postage. printed on the back, made to order.
                 </p>
               </>
             ) : (

@@ -7,6 +7,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { findImage } from "../_shared/pdia.ts";
+import { postageFor, shippingOption } from "../_shared/postage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
         },
       }],
       shipping_address_collection: { allowed_countries: countries },
+      shipping_options: [shippingOption(postageFor(1, price))],
       phone_number_collection: { enabled: false },
       billing_address_collection: "auto",
       allow_promotion_codes: true,
