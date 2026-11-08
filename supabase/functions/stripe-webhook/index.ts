@@ -13,7 +13,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
-type Design = { id: string; title: string | null; print_url: string | null; source_url: string | null };
+type Design = {
+  id: string; title: string | null; print_url: string | null; source_url: string | null;
+  saved_url?: string | null; // our own copy in the order-designs bucket
+};
 type OrderItem = { name: string | null; size: string | null; quantity: number | null; design?: Design | null };
 type Address = {
   line1?: string | null; line2?: string | null; city?: string | null;
@@ -23,6 +26,32 @@ type Address = {
 const esc = (v: unknown) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const money = (pence: number | null | undefined) => `£${((pence ?? 0) / 100).toFixed(2)}`;
+
+// Saves a full-size copy of a random-slop image in our own storage so the order
+// record doesn't depend on the archive's link. Returns the public URL, or null
+// (never throws — the order must still be recorded and emailed).
+async function saveDesignCopy(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  design: Design,
+): Promise<string | null> {
+  if (!design.print_url?.startsWith("https://images.pdimagearchive.org/")) return null;
+  try {
+    const res = await fetch(design.print_url, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`download ${res.status}`);
+    const type = res.headers.get("content-type") ?? "image/jpeg";
+    const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+    const path = `${design.id}/${sessionId}.${ext}`;
+    const { error } = await supabase.storage
+      .from("order-designs")
+      .upload(path, await res.arrayBuffer(), { contentType: type, upsert: true });
+    if (error) throw error;
+    return supabase.storage.from("order-designs").getPublicUrl(path).data.publicUrl;
+  } catch (e) {
+    console.error("design copy failed", (e as Error).message);
+    return null;
+  }
+}
 
 // Emails the order laid out for copying into Tapstitch. Never throws.
 async function sendOrderEmail(order: {
@@ -38,7 +67,7 @@ async function sendOrderEmail(order: {
   const itemCount = order.items.reduce((n, i) => n + (i.quantity ?? 0), 0);
   const itemRows = order.items
     .map((i) => `<tr><td style="padding:6px 12px 6px 0">${esc(i.name)}</td><td style="padding:6px 12px 6px 0"><b>${esc((i.size ?? "?").toUpperCase())}</b></td><td style="padding:6px 0">× ${esc(i.quantity)}</td></tr>` +
-      (i.design ? `<tr><td colspan="3" style="padding:0 0 10px;color:#444">Print (back): <a href="${esc(i.design.print_url)}">full-size image</a> · <a href="${esc(i.design.source_url)}">archive page — check rights label</a></td></tr>` : ""))
+      (i.design ? `<tr><td colspan="3" style="padding:0 0 10px;color:#444">Print (back): <a href="${esc(i.design.saved_url ?? i.design.print_url)}">full-size image</a> · <a href="${esc(i.design.source_url)}">archive page — check rights label</a></td></tr>` : ""))
     .join("");
   const stripeLink = order.paymentIntent ? `https://dashboard.stripe.com/payments/${order.paymentIntent}` : null;
 
@@ -61,7 +90,7 @@ async function sendOrderEmail(order: {
     `ITEMS`,
     ...order.items.flatMap((i) => [
       `- ${i.name} | size ${(i.size ?? "?").toUpperCase()} | x${i.quantity}`,
-      ...(i.design ? [`  print (back): ${i.design.print_url}`, `  archive page: ${i.design.source_url}`] : []),
+      ...(i.design ? [`  print (back): ${i.design.saved_url ?? i.design.print_url}`, `  archive page: ${i.design.source_url}`] : []),
     ]),
     ``,
     `SHIP TO`,
@@ -191,6 +220,15 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Keep our own copy of any random-slop print image (skipped if this event is a retry
+  // and the order already has one).
+  if (design) {
+    const { data: existing } = await supabase
+      .from("orders").select("items").eq("stripe_session_id", session.id).maybeSingle();
+    const prior = (existing?.items as { design?: Design }[] | undefined)?.find((i) => i.design?.saved_url)?.design?.saved_url;
+    design.saved_url = prior ?? await saveDesignCopy(supabase, session.id, design);
+  }
 
   const { error } = await supabase.from("orders").upsert(
     {
