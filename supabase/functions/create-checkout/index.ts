@@ -8,6 +8,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { postageFor, shippingOption } from "../_shared/postage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -121,6 +122,10 @@ Deno.serve(async (req) => {
     sizing.push(`${p.slug}:${size}:${it.quantity}`);
   }
 
+  const tees = items.reduce((n, it) => n + it.quantity, 0);
+  const subtotal = items.reduce((n, it) => n + it.quantity * (byId.get(it.product_id)?.price ?? 0), 0);
+  const postage = postageFor(tees, subtotal);
+
   const countries = (Deno.env.get("SHIPPING_COUNTRIES") ?? "GB")
     .split(",")
     .map((c) => c.trim().toUpperCase())
@@ -134,6 +139,7 @@ Deno.serve(async (req) => {
       mode: "payment",
       line_items: lineItems,
       shipping_address_collection: { allowed_countries: countries },
+      shipping_options: [shippingOption(postage)],
       phone_number_collection: { enabled: false },
       billing_address_collection: "auto",
       // Shows "Add promotion code" on the Stripe page; codes are managed in the Stripe dashboard.
