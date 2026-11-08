@@ -56,7 +56,7 @@ async function saveDesignCopy(
 // Emails the order laid out for copying into Tapstitch. Never throws.
 async function sendOrderEmail(order: {
   sessionId: string; paymentIntent: string | null; email: string | null; name: string | null;
-  address: Address | null; items: OrderItem[]; total: number | null; discount: number; codes: string[];
+  address: Address | null; items: OrderItem[]; total: number | null; discount: number; codes: string[]; postage: number;
 }): Promise<boolean> {
   const key = Deno.env.get("RESEND_API_KEY")?.trim();
   if (!key) return false;
@@ -80,6 +80,7 @@ async function sendOrderEmail(order: {
   <p style="margin:0 0 20px;line-height:1.5">${addressLines.map(esc).join("<br>")}</p>
   <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 6px">Customer</h3>
   <p style="margin:0 0 20px">${esc(order.email)}</p>
+  <p style="margin:0 0 4px">Postage paid by customer: ${order.postage ? money(order.postage) : "free"}</p>
   <p style="margin:0 0 4px">Paid: <b>${money(order.total)}</b>${order.discount ? ` (discount ${money(order.discount)}${order.codes.length ? `, code ${esc(order.codes.join(", "))}` : ""})` : ""}</p>
   ${stripeLink ? `<p style="margin:16px 0 0"><a href="${stripeLink}">View payment in Stripe</a></p>` : ""}
 </div>`;
@@ -97,6 +98,7 @@ async function sendOrderEmail(order: {
     ...addressLines,
     ``,
     `CUSTOMER: ${order.email ?? ""}`,
+    `POSTAGE: ${order.postage ? money(order.postage) : "free"}`,
     `PAID: ${money(order.total)}${order.discount ? ` (discount ${money(order.discount)} ${order.codes.join(", ")})` : ""}`,
     stripeLink ? `STRIPE: ${stripeLink}` : "",
   ].join("\n");
@@ -241,6 +243,7 @@ Deno.serve(async (req) => {
       items,
       amount_total: session.amount_total,
       amount_discount: session.total_details?.amount_discount ?? 0,
+      amount_shipping: session.total_details?.amount_shipping ?? 0,
       discount_codes: discountCodes,
       currency: session.currency,
       status: "paid",
@@ -272,6 +275,7 @@ Deno.serve(async (req) => {
       total: session.amount_total,
       discount: session.total_details?.amount_discount ?? 0,
       codes: discountCodes,
+      postage: session.total_details?.amount_shipping ?? 0,
     });
     if (sent) {
       await supabase.from("orders").update({ notified_at: new Date().toISOString() }).eq("stripe_session_id", session.id);
