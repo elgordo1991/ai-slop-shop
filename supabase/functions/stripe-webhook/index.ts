@@ -13,7 +13,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
-type OrderItem = { name: string | null; size: string | null; quantity: number | null };
+type Design = { id: string; title: string | null; print_url: string | null; source_url: string | null };
+type OrderItem = { name: string | null; size: string | null; quantity: number | null; design?: Design | null };
 type Address = {
   line1?: string | null; line2?: string | null; city?: string | null;
   state?: string | null; postal_code?: string | null; country?: string | null;
@@ -36,7 +37,8 @@ async function sendOrderEmail(order: {
   const addressLines = [order.name, a.line1, a.line2, a.city, a.state, a.postal_code, a.country].filter(Boolean);
   const itemCount = order.items.reduce((n, i) => n + (i.quantity ?? 0), 0);
   const itemRows = order.items
-    .map((i) => `<tr><td style="padding:6px 12px 6px 0">${esc(i.name)}</td><td style="padding:6px 12px 6px 0"><b>${esc((i.size ?? "?").toUpperCase())}</b></td><td style="padding:6px 0">× ${esc(i.quantity)}</td></tr>`)
+    .map((i) => `<tr><td style="padding:6px 12px 6px 0">${esc(i.name)}</td><td style="padding:6px 12px 6px 0"><b>${esc((i.size ?? "?").toUpperCase())}</b></td><td style="padding:6px 0">× ${esc(i.quantity)}</td></tr>` +
+      (i.design ? `<tr><td colspan="3" style="padding:0 0 10px;color:#444">Print (back): <a href="${esc(i.design.print_url)}">full-size image</a> · <a href="${esc(i.design.source_url)}">archive page — check rights label</a></td></tr>` : ""))
     .join("");
   const stripeLink = order.paymentIntent ? `https://dashboard.stripe.com/payments/${order.paymentIntent}` : null;
 
@@ -57,7 +59,10 @@ async function sendOrderEmail(order: {
     `New slop order — place this in Tapstitch`,
     ``,
     `ITEMS`,
-    ...order.items.map((i) => `- ${i.name} | size ${(i.size ?? "?").toUpperCase()} | x${i.quantity}`),
+    ...order.items.flatMap((i) => [
+      `- ${i.name} | size ${(i.size ?? "?").toUpperCase()} | x${i.quantity}`,
+      ...(i.design ? [`  print (back): ${i.design.print_url}`, `  archive page: ${i.design.source_url}`] : []),
+    ]),
     ``,
     `SHIP TO`,
     ...addressLines,
@@ -151,6 +156,12 @@ Deno.serve(async (req) => {
     };
   });
 
+  // Random-slop tees carry the image to print in the session metadata.
+  const md = session.metadata ?? {};
+  const design: Design | null = md.design_id
+    ? { id: md.design_id, title: md.design_title ?? null, print_url: md.design_print_url ?? null, source_url: md.design_source_url ?? null }
+    : null;
+
   const items = sized.length
     ? sized.map((s) => {
         const line = lines.find((l) => l.slug === s.slug);
@@ -162,6 +173,7 @@ Deno.serve(async (req) => {
           size: s.size,
           quantity: s.quantity,
           unit_amount: line?.unit_amount ?? null,
+          ...(design && s.slug === "random-slop" ? { design } : {}),
         };
       })
     : lines.map(({ legacy_size, ...l }) => ({ ...l, size: legacy_size }));
