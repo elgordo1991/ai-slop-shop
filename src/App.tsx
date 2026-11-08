@@ -5,6 +5,7 @@ import { SuggestModal } from './components/SuggestModal';
 import { ProductCard, formatPrice, type Product } from './components/ProductCard';
 import { supabase } from './lib/supabase';
 import { useSwipe } from './lib/useSwipe';
+import { postageFor, FREE_POSTAGE_FROM } from './lib/postage';
 
 const CART_KEY = 'slop-bag-v1';
 
@@ -212,7 +213,9 @@ function App() {
 
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
+  const postage = postageFor(totalItems, subtotal);
+  const totalPrice = subtotal + postage;
   const checkoutItems = cart.map((item) => ({
     product_id: item.product.id,
     size: item.size,
@@ -436,7 +439,16 @@ function App() {
                     </div>
                   </div>
                 ))}
-                <div className="flex justify-between items-center pt-6">
+                <div className="flex justify-between items-center pt-6 text-sm text-gray-500 lowercase">
+                  <span>uk postage</span>
+                  <span>{postage ? formatPrice(postage) : 'free'}</span>
+                </div>
+                {postage > 0 && (
+                  <p className="text-xs text-gray-400 mt-1 lowercase">
+                    free postage on orders of {formatPrice(FREE_POSTAGE_FROM)} or more
+                  </p>
+                )}
+                <div className="flex justify-between items-center pt-4">
                   <span className="text-xs font-medium uppercase tracking-widest text-gray-400">total</span>
                   <span className="text-lg font-medium">{formatPrice(totalPrice)}</span>
                 </div>
