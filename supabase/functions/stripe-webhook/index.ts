@@ -13,7 +13,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
-type OrderItem = { name: string | null; size: string | null; quantity: number | null };
+type Design = {
+  id: string; title: string | null; print_url: string | null; source_url: string | null;
+  saved_url?: string | null; // our own copy in the order-designs bucket
+};
+type OrderItem = { name: string | null; size: string | null; quantity: number | null; design?: Design | null };
 type Address = {
   line1?: string | null; line2?: string | null; city?: string | null;
   state?: string | null; postal_code?: string | null; country?: string | null;
@@ -23,10 +27,36 @@ const esc = (v: unknown) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const money = (pence: number | null | undefined) => `£${((pence ?? 0) / 100).toFixed(2)}`;
 
+// Saves a full-size copy of a random-slop image in our own storage so the order
+// record doesn't depend on the archive's link. Returns the public URL, or null
+// (never throws — the order must still be recorded and emailed).
+async function saveDesignCopy(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  design: Design,
+): Promise<string | null> {
+  if (!design.print_url?.startsWith("https://images.pdimagearchive.org/")) return null;
+  try {
+    const res = await fetch(design.print_url, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`download ${res.status}`);
+    const type = res.headers.get("content-type") ?? "image/jpeg";
+    const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+    const path = `${design.id}/${sessionId}.${ext}`;
+    const { error } = await supabase.storage
+      .from("order-designs")
+      .upload(path, await res.arrayBuffer(), { contentType: type, upsert: true });
+    if (error) throw error;
+    return supabase.storage.from("order-designs").getPublicUrl(path).data.publicUrl;
+  } catch (e) {
+    console.error("design copy failed", (e as Error).message);
+    return null;
+  }
+}
+
 // Emails the order laid out for copying into Tapstitch. Never throws.
 async function sendOrderEmail(order: {
   sessionId: string; paymentIntent: string | null; email: string | null; name: string | null;
-  address: Address | null; items: OrderItem[]; total: number | null; discount: number; codes: string[];
+  address: Address | null; items: OrderItem[]; total: number | null; discount: number; codes: string[]; postage: number;
 }): Promise<boolean> {
   const key = Deno.env.get("RESEND_API_KEY")?.trim();
   if (!key) return false;
@@ -36,7 +66,8 @@ async function sendOrderEmail(order: {
   const addressLines = [order.name, a.line1, a.line2, a.city, a.state, a.postal_code, a.country].filter(Boolean);
   const itemCount = order.items.reduce((n, i) => n + (i.quantity ?? 0), 0);
   const itemRows = order.items
-    .map((i) => `<tr><td style="padding:6px 12px 6px 0">${esc(i.name)}</td><td style="padding:6px 12px 6px 0"><b>${esc((i.size ?? "?").toUpperCase())}</b></td><td style="padding:6px 0">× ${esc(i.quantity)}</td></tr>`)
+    .map((i) => `<tr><td style="padding:6px 12px 6px 0">${esc(i.name)}</td><td style="padding:6px 12px 6px 0"><b>${esc((i.size ?? "?").toUpperCase())}</b></td><td style="padding:6px 0">× ${esc(i.quantity)}</td></tr>` +
+      (i.design ? `<tr><td colspan="3" style="padding:0 0 10px;color:#444">Print (back): <a href="${esc(i.design.saved_url ?? i.design.print_url)}">full-size image</a> · <a href="${esc(i.design.source_url)}">archive page — check rights label</a></td></tr>` : ""))
     .join("");
   const stripeLink = order.paymentIntent ? `https://dashboard.stripe.com/payments/${order.paymentIntent}` : null;
 
@@ -49,6 +80,7 @@ async function sendOrderEmail(order: {
   <p style="margin:0 0 20px;line-height:1.5">${addressLines.map(esc).join("<br>")}</p>
   <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 6px">Customer</h3>
   <p style="margin:0 0 20px">${esc(order.email)}</p>
+  <p style="margin:0 0 4px">Postage paid by customer: ${order.postage ? money(order.postage) : "free"}</p>
   <p style="margin:0 0 4px">Paid: <b>${money(order.total)}</b>${order.discount ? ` (discount ${money(order.discount)}${order.codes.length ? `, code ${esc(order.codes.join(", "))}` : ""})` : ""}</p>
   ${stripeLink ? `<p style="margin:16px 0 0"><a href="${stripeLink}">View payment in Stripe</a></p>` : ""}
 </div>`;
@@ -57,12 +89,16 @@ async function sendOrderEmail(order: {
     `New slop order — place this in Tapstitch`,
     ``,
     `ITEMS`,
-    ...order.items.map((i) => `- ${i.name} | size ${(i.size ?? "?").toUpperCase()} | x${i.quantity}`),
+    ...order.items.flatMap((i) => [
+      `- ${i.name} | size ${(i.size ?? "?").toUpperCase()} | x${i.quantity}`,
+      ...(i.design ? [`  print (back): ${i.design.saved_url ?? i.design.print_url}`, `  archive page: ${i.design.source_url}`] : []),
+    ]),
     ``,
     `SHIP TO`,
     ...addressLines,
     ``,
     `CUSTOMER: ${order.email ?? ""}`,
+    `POSTAGE: ${order.postage ? money(order.postage) : "free"}`,
     `PAID: ${money(order.total)}${order.discount ? ` (discount ${money(order.discount)} ${order.codes.join(", ")})` : ""}`,
     stripeLink ? `STRIPE: ${stripeLink}` : "",
   ].join("\n");
@@ -151,6 +187,12 @@ Deno.serve(async (req) => {
     };
   });
 
+  // Random-slop tees carry the image to print in the session metadata.
+  const md = session.metadata ?? {};
+  const design: Design | null = md.design_id
+    ? { id: md.design_id, title: md.design_title ?? null, print_url: md.design_print_url ?? null, source_url: md.design_source_url ?? null }
+    : null;
+
   const items = sized.length
     ? sized.map((s) => {
         const line = lines.find((l) => l.slug === s.slug);
@@ -162,6 +204,7 @@ Deno.serve(async (req) => {
           size: s.size,
           quantity: s.quantity,
           unit_amount: line?.unit_amount ?? null,
+          ...(design && s.slug === "random-slop" ? { design } : {}),
         };
       })
     : lines.map(({ legacy_size, ...l }) => ({ ...l, size: legacy_size }));
@@ -180,6 +223,15 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Keep our own copy of any random-slop print image (skipped if this event is a retry
+  // and the order already has one).
+  if (design) {
+    const { data: existing } = await supabase
+      .from("orders").select("items").eq("stripe_session_id", session.id).maybeSingle();
+    const prior = (existing?.items as { design?: Design }[] | undefined)?.find((i) => i.design?.saved_url)?.design?.saved_url;
+    design.saved_url = prior ?? await saveDesignCopy(supabase, session.id, design);
+  }
+
   const { error } = await supabase.from("orders").upsert(
     {
       stripe_session_id: session.id,
@@ -191,6 +243,7 @@ Deno.serve(async (req) => {
       items,
       amount_total: session.amount_total,
       amount_discount: session.total_details?.amount_discount ?? 0,
+      amount_shipping: session.total_details?.amount_shipping ?? 0,
       discount_codes: discountCodes,
       currency: session.currency,
       status: "paid",
@@ -222,6 +275,7 @@ Deno.serve(async (req) => {
       total: session.amount_total,
       discount: session.total_details?.amount_discount ?? 0,
       codes: discountCodes,
+      postage: session.total_details?.amount_shipping ?? 0,
     });
     if (sent) {
       await supabase.from("orders").update({ notified_at: new Date().toISOString() }).eq("stripe_session_id", session.id);

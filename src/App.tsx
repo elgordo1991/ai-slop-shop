@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X, Lightbulb } from 'lucide-react';
+import { ShoppingBag, Shirt, Info, ArrowRight, Minus, Plus, X, Lightbulb, Dices } from 'lucide-react';
 import { CheckoutButton } from './components/CheckoutButton';
 import { SuggestModal } from './components/SuggestModal';
+import { RandomSlop } from './components/RandomSlop';
 import { ProductCard, formatPrice, type Product } from './components/ProductCard';
 import { supabase } from './lib/supabase';
 import { useSwipe } from './lib/useSwipe';
@@ -150,6 +151,8 @@ function App() {
     if (urlParams.get('success') === 'true') {
       setCurrentSection('thanks');
       setCart([]);
+    } else if (urlParams.get('cancelled') === 'random') {
+      setCurrentSection('random');
     } else if (urlParams.get('cancelled') === 'true') {
       setCurrentSection('payment');
       setNotice('checkout cancelled — your bag is still here.');
@@ -258,6 +261,14 @@ function App() {
               >
                 <Shirt className="w-4 h-4" />
                 <span className="hidden sm:inline">shop</span>
+              </button>
+              <button
+                aria-label="random slop"
+                onClick={() => setCurrentSection('random')}
+                className="text-sm font-medium hover:opacity-70 transition-opacity flex items-center space-x-2 lowercase"
+              >
+                <Dices className="w-4 h-4" />
+                <span className="hidden sm:inline">random</span>
               </button>
               <button
                 aria-label="about"
@@ -370,6 +381,9 @@ function App() {
           </div>
         </section>
       )}
+
+      {/* Random Slop Section */}
+      {currentSection === 'random' && <RandomSlop />}
 
       {/* About Section */}
       {currentSection === 'about' && (
