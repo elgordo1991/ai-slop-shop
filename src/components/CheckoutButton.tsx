@@ -6,6 +6,7 @@ export interface CheckoutLine {
   product_id: string;
   size: string;
   quantity: number;
+  design_id?: string;
 }
 
 interface CheckoutButtonProps {

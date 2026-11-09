@@ -12,6 +12,7 @@ export interface Product {
   color: string;
   images: string[];
   sizes: string[];
+  design_id?: string; // random slop: the archive image printed on this tee
 }
 
 export const formatPrice = (pence: number) => `£${(pence / 100).toFixed(2)}`;

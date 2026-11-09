@@ -176,6 +176,7 @@ function App() {
     setCart((current) =>
       current
         .map((item) => {
+          if (item.product.design_id) return item; // random slop isn't in the products table
           const live = products.find((p) => p.id === item.product.id);
           return live ? { ...item, product: live } : null;
         })
@@ -194,16 +195,18 @@ function App() {
     setProductsLoading(false);
   };
 
-  const addToBag = (product: Product, size: string) => {
-    const existingIndex = cart.findIndex(
-      item => item.product.id === product.id && item.size === size
-    );
-    if (existingIndex >= 0) {
-      setCart(cart.map((item, i) => (i === existingIndex ? { ...item, quantity: Math.min(item.quantity + 1, 10) } : item)));
-    } else {
-      setCart([...cart, { product, size, quantity: 1 }]);
-    }
-    setCurrentSection('payment');
+  const addToBag = (product: Product, size: string, goToBag = true) => {
+    setCart((current) => {
+      const existingIndex = current.findIndex(
+        (item) => item.product.id === product.id && item.size === size,
+      );
+      if (existingIndex >= 0) {
+        return current.map((item, i) => (i === existingIndex ? { ...item, quantity: Math.min(item.quantity + 1, 10) } : item));
+      }
+      return [...current, { product, size, quantity: 1 }];
+    });
+    setNotice(null);
+    if (goToBag) setCurrentSection('payment');
   };
 
   const updateQuantity = (index: number, change: number) => {
@@ -223,6 +226,7 @@ function App() {
     product_id: item.product.id,
     size: item.size,
     quantity: item.quantity,
+    ...(item.product.design_id ? { design_id: item.product.design_id } : {}),
   }));
 
 
@@ -383,7 +387,12 @@ function App() {
       )}
 
       {/* Random Slop Section */}
-      {currentSection === 'random' && <RandomSlop />}
+      {currentSection === 'random' && (
+        <RandomSlop
+          onAddToBag={(product, size) => addToBag(product, size, false)}
+          onViewBag={() => setCurrentSection('payment')}
+        />
+      )}
 
       {/* About Section */}
       {currentSection === 'about' && (
@@ -480,6 +489,14 @@ function App() {
                 <p className="text-xs text-gray-400 text-center mt-3 lowercase">
                   secure payment by stripe. got a discount code? add it at checkout.
                 </p>
+                <div className="flex justify-center gap-6 mt-8 text-sm text-gray-500 lowercase">
+                  <button onClick={() => setCurrentSection('shop')} className="hover:text-black underline-offset-4 hover:underline">
+                    continue shopping
+                  </button>
+                  <button onClick={() => setCurrentSection('random')} className="hover:text-black underline-offset-4 hover:underline">
+                    roll a random one
+                  </button>
+                </div>
               </div>
             )}
 

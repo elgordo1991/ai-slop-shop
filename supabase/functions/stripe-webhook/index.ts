@@ -180,6 +180,15 @@ Deno.serve(async (req) => {
       slug: product?.metadata?.slug ?? null,
       product_id: product?.metadata?.supabase_id ?? product?.metadata?.product_id ?? null,
       legacy_size: product?.metadata?.size ?? null,
+      // Random-slop tees carry the image to print on the line's product.
+      design: product?.metadata?.design_id
+        ? {
+            id: product.metadata.design_id,
+            title: product.metadata.design_title ?? null,
+            print_url: product.metadata.design_print_url ?? null,
+            source_url: product.metadata.design_source_url ?? null,
+          } as Design
+        : null,
       name: li.description,
       quantity: li.quantity,
       unit_amount: li.price?.unit_amount ?? null,
@@ -187,7 +196,7 @@ Deno.serve(async (req) => {
     };
   });
 
-  // Random-slop tees carry the image to print in the session metadata.
+  // Older random-slop checkouts (single tee) put the design in the session metadata.
   const md = session.metadata ?? {};
   const design: Design | null = md.design_id
     ? { id: md.design_id, title: md.design_title ?? null, print_url: md.design_print_url ?? null, source_url: md.design_source_url ?? null }
@@ -204,10 +213,10 @@ Deno.serve(async (req) => {
           size: s.size,
           quantity: s.quantity,
           unit_amount: line?.unit_amount ?? null,
-          ...(design && s.slug === "random-slop" ? { design } : {}),
+          ...(line?.design ? { design: line.design } : design && s.slug === "random-slop" ? { design } : {}),
         };
       })
-    : lines.map(({ legacy_size, ...l }) => ({ ...l, size: legacy_size }));
+    : lines.map(({ legacy_size, design: _d, ...l }) => ({ ...l, size: legacy_size }));
 
   const discountCodes = (session.discounts ?? [])
     .map((d) => (typeof d.promotion_code === "object" ? d.promotion_code?.code : null))
@@ -223,13 +232,25 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Keep our own copy of any random-slop print image (skipped if this event is a retry
-  // and the order already has one).
-  if (design) {
+  // Keep our own copy of each random-slop print image (reused if this event is a retry
+  // and the order already has them).
+  const orderDesigns = new Map<string, Design>();
+  for (const it of items as { design?: Design }[]) if (it.design) orderDesigns.set(it.design.id, it.design);
+  if (orderDesigns.size) {
     const { data: existing } = await supabase
       .from("orders").select("items").eq("stripe_session_id", session.id).maybeSingle();
-    const prior = (existing?.items as { design?: Design }[] | undefined)?.find((i) => i.design?.saved_url)?.design?.saved_url;
-    design.saved_url = prior ?? await saveDesignCopy(supabase, session.id, design);
+    const prior = new Map(
+      ((existing?.items as { design?: Design }[] | undefined) ?? [])
+        .filter((i) => i.design?.saved_url)
+        .map((i) => [i.design!.id, i.design!.saved_url!]),
+    );
+    for (const d of orderDesigns.values()) {
+      d.saved_url = prior.get(d.id) ?? await saveDesignCopy(supabase, session.id, d);
+    }
+  }
+  // Same image in two sizes shares one Design object, so every item now has its saved_url.
+  for (const it of items as { design?: Design }[]) {
+    if (it.design && !it.design.saved_url) it.design.saved_url = orderDesigns.get(it.design.id)?.saved_url ?? null;
   }
 
   const { error } = await supabase.from("orders").upsert(

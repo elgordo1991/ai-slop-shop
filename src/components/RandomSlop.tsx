@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Dices, ExternalLink } from 'lucide-react';
+import { Dices, ExternalLink, Check } from 'lucide-react';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { formatPrice } from './ProductCard';
-import { postageFor } from '../lib/postage';
+import { formatPrice, type Product } from './ProductCard';
+import { FREE_POSTAGE_FROM } from '../lib/postage';
 
 export interface RandomImage {
   id: string;
@@ -15,7 +15,7 @@ export interface RandomImage {
   source_url: string;
 }
 
-const PRICE = 2000; // keep in step with RANDOM_TEE_PRICE in create-random-checkout
+const PRICE = 2000; // keep in step with RANDOM_TEE_PRICE in create-checkout
 const SIZES = ['s', 'm', 'l', 'xl'];
 
 async function errorMessage(error: unknown, fallback: string) {
@@ -26,12 +26,34 @@ async function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function RandomSlop() {
+// A random tee as a bag item. It isn't in the products table: create-checkout
+// recognises it by design_id and looks the image up again itself.
+export function randomProduct(image: RandomImage): Product {
+  return {
+    id: `random:${image.id}`,
+    slug: 'random-slop',
+    name: `random slop — ${image.title.toLowerCase()}`,
+    stripe_product_id: null,
+    price: PRICE,
+    currency: 'gbp',
+    color: 'black',
+    images: [image.preview_url],
+    sizes: SIZES,
+    design_id: image.id,
+  };
+}
+
+interface RandomSlopProps {
+  onAddToBag: (product: Product, size: string) => void;
+  onViewBag: () => void;
+}
+
+export function RandomSlop({ onAddToBag, onViewBag }: RandomSlopProps) {
   const [image, setImage] = useState<RandomImage | null>(null);
   const [rolling, setRolling] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [size, setSize] = useState('');
-  const [buying, setBuying] = useState(false);
+  const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const roll = async () => {
@@ -53,22 +75,14 @@ export function RandomSlop() {
     });
     setLoaded(false);
     setImage(data);
+    setAdded(false);
     setRolling(false);
   };
 
-  const buy = async () => {
+  const add = () => {
     if (!image || !size) return;
-    setBuying(true);
-    setError(null);
-    const { data, error } = await supabase.functions.invoke<{ url?: string }>('create-random-checkout', {
-      body: { image_id: image.id, size },
-    });
-    if (error || !data?.url) {
-      setError(await errorMessage(error, 'something went wrong starting checkout'));
-      setBuying(false);
-      return;
-    }
-    window.location.href = data.url;
+    onAddToBag(randomProduct(image), size);
+    setAdded(true);
   };
 
   return (
@@ -130,7 +144,7 @@ export function RandomSlop() {
 
                 <button
                   onClick={roll}
-                  disabled={rolling || buying}
+                  disabled={rolling}
                   className="minimal-button flex items-center space-x-2 mb-10 lowercase"
                 >
                   <Dices className="w-4 h-4" />
@@ -142,7 +156,7 @@ export function RandomSlop() {
                   {SIZES.map((s) => (
                     <button
                       key={s}
-                      onClick={() => setSize(s)}
+                      onClick={() => { setSize(s); setAdded(false); }}
                       className={`py-2 text-sm font-medium border transition-colors lowercase ${
                         size === s ? 'border-black bg-black text-white' : 'border-stone-300 hover:border-stone-500 bg-white'
                       }`}
@@ -152,17 +166,33 @@ export function RandomSlop() {
                   ))}
                 </div>
 
-                <button
-                  onClick={buy}
-                  disabled={!size || buying || rolling}
-                  className={`w-full py-4 text-sm font-medium transition-all lowercase ${
-                    size && !buying && !rolling ? 'minimal-button-full' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                  }`}
-                >
-                  {buying ? 'taking you to checkout...' : size ? `buy this one — ${formatPrice(PRICE)}` : 'select a size'}
-                </button>
+                {added ? (
+                  <div className="border border-stone-300 bg-white p-4">
+                    <p className="flex items-center gap-2 text-sm mb-4 lowercase">
+                      <Check className="w-4 h-4" /> added to your bag ({size})
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={roll} disabled={rolling} className="minimal-button lowercase">
+                        {rolling ? 'rolling...' : 'roll another'}
+                      </button>
+                      <button onClick={onViewBag} className="py-3 text-sm font-medium minimal-button-full lowercase">
+                        view bag
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={add}
+                    disabled={!size || rolling}
+                    className={`w-full py-4 text-sm font-medium transition-all lowercase ${
+                      size && !rolling ? 'minimal-button-full' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {size ? `add to bag — ${formatPrice(PRICE)}` : 'select a size'}
+                  </button>
+                )}
                 <p className="text-xs text-gray-400 text-center mt-3 lowercase">
-                  + {formatPrice(postageFor(1, PRICE))} uk postage. printed on the back, made to order.
+                  printed on the back, made to order. free uk postage on orders of {formatPrice(FREE_POSTAGE_FROM)} or more.
                 </p>
               </>
             ) : (
